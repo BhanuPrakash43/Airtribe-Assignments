@@ -1,19 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { useDrag, useDrop } from "react-dnd";
+import { Link } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
 import NewTaskModal from "./NewTaskModal";
-import EditTaskModal from "./EditTaskModal";
 import styles from "./ListTask.module.css";
-
-// Import statements...
 
 function ListTask({ tasks, setTasks }) {
   const [todos, setTodos] = useState([]);
   const [inProgress, setInProgress] = useState([]);
   const [closed, setClosed] = useState([]);
-  const [showNewTaskModal, setShowNewTaskModal] = useState(false);
-  const [showEditTaskModal, setShowEditTaskModal] = useState(false);
-  const [selectedTask, setSelectedTask] = useState(null);
+  const [showModal, setShowModal] = useState(false);
   const [newTaskName, setNewTaskName] = useState("");
   const [newTaskDescription, setNewTaskDescription] = useState("");
   const [newTaskStatus, setNewTaskStatus] = useState("");
@@ -30,20 +26,7 @@ function ListTask({ tasks, setTasks }) {
     setClosed(fClosed);
   }, [tasks]);
 
-  const openEditTaskModal = (task) => {
-    setSelectedTask(task);
-    setShowEditTaskModal(true);
-  };
-
-  const handleTaskUpdate = (updatedTask) => {
-    setTasks((prevTasks) => {
-      const updatedTasks = prevTasks.map((task) =>
-        task.id === updatedTask.id ? updatedTask : task
-      );
-      localStorage.setItem("tasks", JSON.stringify(updatedTasks));
-      return updatedTasks;
-    });
-  };
+  const statuses = ["todo", "inprogress", "closed"];
 
   const handleNewTaskSubmit = () => {
     if (newTaskName && newTaskDescription && newTaskStatus) {
@@ -60,7 +43,7 @@ function ListTask({ tasks, setTasks }) {
         return updatedTasks;
       });
 
-      setShowNewTaskModal(false);
+      setShowModal(false);
       setNewTaskName("");
       setNewTaskDescription("");
       setNewTaskStatus("");
@@ -68,57 +51,36 @@ function ListTask({ tasks, setTasks }) {
   };
 
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "5em" }}>
-      <Section
-        status="todo"
-        tasks={tasks}
-        setTasks={setTasks}
-        todos={todos}
-        openEditTaskModal={openEditTaskModal}
-        setShowNewTaskModal={setShowNewTaskModal}
-        handleNewTaskSubmit={handleNewTaskSubmit}
-        setNewTaskName={setNewTaskName}
-        setNewTaskDescription={setNewTaskDescription}
-        setNewTaskStatus={setNewTaskStatus}
-      />
-      <Section
-        status="inprogress"
-        tasks={tasks}
-        setTasks={setTasks}
-        inProgress={inProgress}
-        openEditTaskModal={openEditTaskModal}
-        setShowNewTaskModal={setShowNewTaskModal}
-        handleNewTaskSubmit={handleNewTaskSubmit}
-        setNewTaskName={setNewTaskName}
-        setNewTaskDescription={setNewTaskDescription}
-        setNewTaskStatus={setNewTaskStatus}
-      />
-      <Section
-        status="closed"
-        tasks={tasks}
-        setTasks={setTasks}
-        closed={closed}
-        openEditTaskModal={openEditTaskModal}
-        setShowNewTaskModal={setShowNewTaskModal}
-        handleNewTaskSubmit={handleNewTaskSubmit}
-        setNewTaskName={setNewTaskName}
-        setNewTaskDescription={setNewTaskDescription}
-        setNewTaskStatus={setNewTaskStatus}
-      />
-      {showNewTaskModal && (
-        <NewTaskModal
-          setShowModal={setShowNewTaskModal}
-          handleNewTaskSubmit={handleNewTaskSubmit}
-          setNewTaskName={setNewTaskName}
-          setNewTaskDescription={setNewTaskDescription}
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        gap: "5em",
+      }}
+    >
+      {statuses.map((status, index) => (
+        <Section
+          key={index}
+          status={status}
+          tasks={tasks}
+          setTasks={setTasks}
+          todos={todos}
+          inProgress={inProgress}
+          closed={closed}
+          setShowModal={setShowModal}
           setNewTaskStatus={setNewTaskStatus}
         />
-      )}
-      {showEditTaskModal && (
-        <EditTaskModal
-          setShowModal={setShowEditTaskModal}
-          task={selectedTask}
-          handleTaskUpdate={handleTaskUpdate}
+      ))}
+      {showModal && (
+        <NewTaskModal
+          setShowModal={setShowModal}
+          newTaskName={newTaskName}
+          setNewTaskName={setNewTaskName}
+          newTaskDescription={newTaskDescription}
+          setNewTaskDescription={setNewTaskDescription}
+          newTaskStatus={newTaskStatus}
+          handleNewTaskSubmit={handleNewTaskSubmit}
         />
       )}
     </div>
@@ -127,9 +89,6 @@ function ListTask({ tasks, setTasks }) {
 
 export default ListTask;
 
-// Section, Header, and Task components...
-
-
 const Section = ({
   status,
   tasks,
@@ -137,8 +96,8 @@ const Section = ({
   todos,
   inProgress,
   closed,
-  openEditTaskModal,
-  setShowNewTaskModal,
+  setShowModal,
+  setNewTaskStatus,
 }) => {
   const [{ isOver }, drop] = useDrop(() => ({
     accept: "task",
@@ -164,12 +123,17 @@ const Section = ({
   }
 
   const addItemToSection = (id) => {
-    setTasks((prevTasks) => {
-      const updatedTasks = prevTasks.map((task) =>
-        task.id === id ? { ...task, status } : task
-      );
-      localStorage.setItem("tasks", JSON.stringify(updatedTasks));
-      return updatedTasks;
+    setTasks((prev) => {
+      if (!Array.isArray(prev)) return prev;
+
+      const modtasks = prev.map((task) => {
+        if (task.id === id) {
+          return { ...task, status: status };
+        }
+        return task;
+      });
+      localStorage.setItem("tasks", JSON.stringify(modtasks));
+      return modtasks;
     });
   };
 
@@ -189,17 +153,14 @@ const Section = ({
 
       {taskToMap.length > 0 &&
         taskToMap.map((task) => (
-          <Task
-            key={task.id}
-            task={task}
-            tasks={tasks}
-            setTasks={setTasks}
-            openEditTaskModal={openEditTaskModal}
-          />
+          <Task key={task.id} task={task} tasks={tasks} setTasks={setTasks} />
         ))}
 
       <button
-        onClick={() => setShowNewTaskModal(true)}
+        onClick={() => {
+          setShowModal(true);
+          setNewTaskStatus(status);
+        }}
         className={styles.NewTaskButton}
       >
         New Task
@@ -226,7 +187,7 @@ const Header = ({ text, bg, count }) => {
   );
 };
 
-const Task = ({ task, tasks, setTasks, openEditTaskModal }) => {
+const Task = ({ task, tasks, setTasks }) => {
   const [{ isDragging }, drag] = useDrag(() => ({
     type: "task",
     item: { id: task.id },
@@ -262,7 +223,7 @@ const Task = ({ task, tasks, setTasks, openEditTaskModal }) => {
 
       <div className={styles.delUpdate}>
         <button
-          onClick={() => openEditTaskModal(task)}
+          onClick={() => handleUpdate(task.id)}
           className={styles.EditButton}
         >
           Edit
