@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useDrag, useDrop } from "react-dnd";
-import { Link } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
 import NewTaskModal from "./NewTaskModal";
+import EditTaskModal from "./EditTaskModal";
 import styles from "./ListTask.module.css";
 
 function ListTask({ tasks, setTasks }) {
@@ -204,6 +204,19 @@ const Task = ({ task, tasks, setTasks }) => {
     setTasks(fTasks);
   };
 
+  // State to manage the visibility of the edit modal
+  const [showEditModal, setShowEditModal] = useState(false);
+
+  // Function to open the edit modal
+  const handleEdit = () => {
+    setShowEditModal(true);
+  };
+
+  // Function to close the edit modal
+  const handleCloseEditModal = () => {
+    setShowEditModal(false);
+  };
+
   return (
     <div
       ref={drag}
@@ -222,19 +235,33 @@ const Task = ({ task, tasks, setTasks }) => {
       <p style={{ margin: 0, fontSize: "1.1em" }}>{task.name}</p>
 
       <div className={styles.delUpdate}>
-        <button
-          onClick={() => handleUpdate(task.id)}
-          className={styles.EditButton}
-        >
+        <button onClick={handleEdit} className={styles.EditButton}>
           Edit
         </button>
-        <button
-          onClick={() => handleRemove(task.id)}
-          className={styles.DeleteButton}
-        >
+        <button onClick={() => handleRemove(task.id)} className={styles.DeleteButton}>
           Del
         </button>
       </div>
+
+      {/* Render EditTaskModal if showEditModal is true */}
+      {showEditModal && (
+        <EditTaskModal
+          setShowModal={setShowEditModal}
+          task={task}
+          handleTaskUpdate={(updatedTask) => {
+            // Handle updating the task here
+            // Update the task in the tasks array
+            const updatedTasks = tasks.map((t) =>
+              t.id === updatedTask.id ? updatedTask : t
+            );
+            setTasks(updatedTasks);
+            // You may also want to update localStorage here
+            localStorage.setItem("tasks", JSON.stringify(updatedTasks));
+          }}
+        />
+      )}
     </div>
   );
 };
+
+// export default Task;
